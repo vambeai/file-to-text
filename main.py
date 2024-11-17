@@ -164,9 +164,6 @@ async def process_document(request: Request, url: str = None, api_key: str = Dep
                     logger.info("Starting Tesseract OCR")
                     text = pytesseract.image_to_string(image)
 
-                    print("PHOTO TEXT:")
-                    print(text)
-
                     if not text.strip():
                         logger.warning("No text extracted from image")
                         return {"text": "", "warning": "No text could be extracted from the image"}
