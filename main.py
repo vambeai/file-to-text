@@ -57,9 +57,13 @@ async def process_document(url: str, api_key: str = Depends(get_api_key)):
 
                 # Extract text from processed PDF
                 text = extract_text(str(output_file))
+                print("PDF TEXT:")
+                print(text)
                 return {"text": text}
             else:
                 # For non-PDF files, return the content directly
+                print("NON-PDF TEXT:")
+                print(response.text)
                 return {"text": response.text}
 
     except requests.RequestException as e:
