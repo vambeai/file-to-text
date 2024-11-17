@@ -8,7 +8,11 @@ import tempfile
 import ocrmypdf
 from pathlib import Path
 import shutil
-from pdfminer.high_level import extract_text  # Import for PDF text extraction
+from pdfminer.high_level import extract_text
+import pytesseract
+from PIL import Image
+import io
+import imghdr
 
 load_dotenv()
 
@@ -26,10 +30,23 @@ async def get_api_key(api_key_header: str = Security(api_key_header)):
         )
     return api_key_header
 
+def is_image_content(content: bytes) -> bool:
+    """Detect if content is an image by trying to open it with PIL"""
+    try:
+        image = Image.open(io.BytesIO(content))
+        return True
+    except:
+        return False
+
+def is_pdf_content(content: bytes) -> bool:
+    """Detect if content is a PDF by checking magic numbers"""
+    return content.startswith(b'%PDF')
+
 @app.get("/process-document")
 async def process_document(request: Request, url: str = None, api_key: str = Depends(get_api_key)):
     # Debug information
     print("Query Params:", dict(request.query_params))
+    print("Headers:", dict(request.headers))
 
     if not url:
         raise HTTPException(status_code=422, detail="URL parameter is required")
@@ -38,18 +55,19 @@ async def process_document(request: Request, url: str = None, api_key: str = Dep
         # Download the file
         response = requests.get(url)
         response.raise_for_status()
+        content = response.content
 
         # Create temporary directory
         with tempfile.TemporaryDirectory() as temp_dir:
             temp_path = Path(temp_dir)
+            input_file = temp_path / "input_file"
 
             # Save downloaded file
-            input_file = temp_path / "input_file"
             with open(input_file, "wb") as f:
-                f.write(response.content)
+                f.write(content)
 
-            # Determine if file is PDF
-            if response.headers.get('content-type') == 'application/pdf':
+            # Detect file type from content
+            if is_pdf_content(content):
                 output_file = temp_path / "output.pdf"
 
                 # Process PDF with OCR
@@ -69,14 +87,44 @@ async def process_document(request: Request, url: str = None, api_key: str = Dep
                 except UnicodeEncodeError:
                     print("PDF TEXT: (unable to display due to encoding issues)")
                 return {"text": text}
-            else:
-                # For non-PDF files, return the content directly
+
+            elif is_image_content(content):
+                # Process image with Tesseract
                 try:
-                    print("PDF TEXT:")
-                    print(response.text[:1000])
-                except UnicodeEncodeError:
-                    print("PDF TEXT: (unable to display due to encoding issues)")
-                return {"text": response.text}
+                    # Open image using PIL
+                    image = Image.open(io.BytesIO(content))
+
+                    # Convert image to text using Tesseract
+                    text = pytesseract.image_to_string(image)
+
+                    # Generate PDF if needed
+                    pdf_path = temp_path / "output.pdf"
+                    pytesseract.image_to_pdf_or_hocr(image, extension='pdf', out_file=str(pdf_path))
+
+                    try:
+                        print("IMAGE TEXT:")
+                        print(text[:1000])
+                    except UnicodeEncodeError:
+                        print("IMAGE TEXT: (unable to display due to encoding issues)")
+
+                    return {"text": text}
+                except Exception as e:
+                    raise HTTPException(
+                        status_code=500,
+                        detail=f"Error processing image with Tesseract: {str(e)}"
+                    )
+            else:
+                # For non-PDF, non-image files, try to decode as text
+                try:
+                    text = content.decode('utf-8')
+                    print("FILE TEXT:")
+                    print(text[:1000])
+                    return {"text": text}
+                except UnicodeDecodeError:
+                    raise HTTPException(
+                        status_code=400,
+                        detail="File appears to be neither an image, PDF, nor text file"
+                    )
 
     except requests.RequestException as e:
         raise HTTPException(status_code=400, detail=f"Error downloading file: {str(e)}")
