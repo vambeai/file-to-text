@@ -131,6 +131,6 @@ async def process_document(request: Request, url: str = None, api_key: str = Dep
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error processing document: {str(e)}")
 
-@app.get("/health")
+@app.get("/health", status_code=200)
 async def health_check():
     return {"status": "healthy"}
