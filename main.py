@@ -8,6 +8,7 @@ import tempfile
 import ocrmypdf
 from pathlib import Path
 import shutil
+from pdfminer.high_level import extract_text  # Import for PDF text extraction
 
 load_dotenv()
 
@@ -55,10 +56,8 @@ async def process_document(url: str, api_key: str = Depends(get_api_key)):
                 )
 
                 # Extract text from processed PDF
-                with open(output_file, 'rb') as f:
-                    # Here you would extract text from the PDF
-                    # For now, returning a placeholder
-                    return {"text": "PDF text extracted successfully"}
+                text = extract_text(str(output_file))
+                return {"text": text}
             else:
                 # For non-PDF files, return the content directly
                 return {"text": response.text}
