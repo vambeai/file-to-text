@@ -75,7 +75,7 @@ async def process_document(request: Request, url: str = None, api_key: str = Dep
                 # For non-PDF files, return the content directly
                 try:
                     print("PDF TEXT:")
-                    print(text[:1000])
+                    print(response.text[:1000])
                 except UnicodeEncodeError:
                     print("PDF TEXT: (unable to display due to encoding issues)")
                 return {"text": response.text}
