@@ -29,9 +29,7 @@ async def get_api_key(api_key_header: str = Security(api_key_header)):
 @app.get("/process-document")
 async def process_document(request: Request, url: str = None, api_key: str = Depends(get_api_key)):
     # Debug information
-    print("Request URL:", request.url)
     print("Query Params:", dict(request.query_params))
-    print("Headers:", dict(request.headers))
 
     if not url:
         raise HTTPException(status_code=422, detail="URL parameter is required")
