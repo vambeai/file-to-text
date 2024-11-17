@@ -9,6 +9,7 @@ RUN apt-get update && apt-get install -y \
     unpaper \
     pngquant \
     qpdf \
+    libmagic1 \
     && rm -rf /var/lib/apt/lists/*
 
 # Set working directory
