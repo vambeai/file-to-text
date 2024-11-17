@@ -65,13 +65,19 @@ async def process_document(request: Request, url: str = None, api_key: str = Dep
 
                 # Extract text from processed PDF
                 text = extract_text(str(output_file))
-                print("PDF TEXT:")
-                print(text)
+                try:
+                    print("PDF TEXT:")
+                    print(text[:1000])
+                except UnicodeEncodeError:
+                    print("PDF TEXT: (unable to display due to encoding issues)")
                 return {"text": text}
             else:
                 # For non-PDF files, return the content directly
-                print("NON-PDF TEXT:")
-                print(response.text)
+                try:
+                    print("PDF TEXT:")
+                    print(text[:1000])
+                except UnicodeEncodeError:
+                    print("PDF TEXT: (unable to display due to encoding issues)")
                 return {"text": response.text}
 
     except requests.RequestException as e:
