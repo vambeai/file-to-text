@@ -70,7 +70,12 @@ def is_pdf_content(content: bytes) -> bool:
         return content.startswith(b'%PDF')  # Fallback to magic number check
 
 @app.get("/process-document")
-async def process_document(request: Request, url: str = None, api_key: str = Depends(get_api_key)):
+async def process_document(
+    request: Request, 
+    url: str = None, 
+    max_chars: int = 1000,  # Default to processing until we get 1000 characters
+    api_key: str = Depends(get_api_key)
+):
     # Debug information
     logger.info(f"Processing document from URL: {url}")
     logger.info(f"Query Params: {dict(request.query_params)}")
@@ -120,26 +125,85 @@ async def process_document(request: Request, url: str = None, api_key: str = Dep
                 output_file = temp_path / "output.pdf"
 
                 try:
-                    # Process PDF with OCR
-                    logger.info("Starting OCR processing of PDF")
-                    ocrmypdf.ocr(
-                        input_file,
-                        output_file,
-                        #force_ocr=True, # Changed: Let ocrmypdf decide based on skip_text.
-                        skip_text=True,   # Changed: Skip OCR if text layer already exists
-                        output_type='pdf',
-                        progress_bar=False
-                    )
-                    logger.info("OCR processing completed")
-
-                    # Extract text from processed PDF
-                    text = extract_text(str(output_file))
-                    if not text.strip():
+                    # For PDFs, we'll process page by page until we get enough text
+                    logger.info(f"Processing PDF until we get {max_chars} characters")
+                    
+                    # Import additional tools for page-by-page processing
+                    from pdfminer.high_level import extract_text_to_fp
+                    from pdfminer.layout import LAParams
+                    from io import StringIO
+                    import PyPDF2
+                    
+                    # First, get the total number of pages
+                    with open(input_file, 'rb') as f:
+                        pdf_reader = PyPDF2.PdfReader(f)
+                        total_pages = len(pdf_reader.pages)
+                    
+                    logger.info(f"PDF has {total_pages} pages, processing incrementally")
+                    
+                    # Process pages one by one until we have enough text
+                    collected_text = ""
+                    pages_processed = 0
+                    
+                    for page_num in range(min(total_pages, 10)):  # Limit to first 10 pages max for safety
+                        pages_processed += 1
+                        
+                        # Process just this page with OCR
+                        page_output = temp_path / f"output_page_{page_num+1}.pdf"
+                        
+                        try:
+                            ocrmypdf.ocr(
+                                input_file,
+                                page_output,
+                                force_ocr=True,
+                                output_type='pdf',
+                                progress_bar=False,
+                                pages=[page_num+1]  # 1-based page numbering
+                            )
+                            
+                            # Extract text from just this page
+                            output_string = StringIO()
+                            with open(str(page_output), 'rb') as fin:
+                                extract_text_to_fp(fin, output_string, laparams=LAParams())
+                            page_text = output_string.getvalue()
+                            
+                            # Add to our collected text
+                            collected_text += page_text
+                            
+                            logger.info(f"Processed page {page_num+1}, text length now: {len(collected_text)}")
+                            
+                            # If we have enough text, stop processing
+                            if len(collected_text) >= max_chars:
+                                logger.info(f"Reached {len(collected_text)} characters after {pages_processed} pages, stopping")
+                                break
+                                
+                        except Exception as e:
+                            logger.warning(f"Error processing page {page_num+1}: {str(e)}")
+                            # Continue with next page if one fails
+                    
+                    # Truncate to exactly max_chars if we have more
+                    if len(collected_text) > max_chars:
+                        final_text = collected_text[:max_chars]
+                        truncated = True
+                    else:
+                        final_text = collected_text
+                        truncated = False
+                    
+                    if not final_text.strip():
                         logger.warning("No text extracted from PDF")
                         return {"text": "", "warning": "No text could be extracted from the PDF"}
-
-                    logger.info("Text extracted from PDF")
-                    return {"text": text}
+                    
+                    response = {
+                        "text": final_text,
+                        "pages_processed": pages_processed,
+                        "total_pages": total_pages
+                    }
+                    
+                    if truncated:
+                        response["truncated"] = True
+                    
+                    logger.info(f"Finished processing PDF. Processed {pages_processed} of {total_pages} pages.")
+                    return response
                 except Exception as e:
                     logger.error(f"Error during PDF processing: {str(e)}")
                     logger.error(traceback.format_exc())
