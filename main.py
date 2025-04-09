@@ -8,7 +8,7 @@ import tempfile
 import ocrmypdf
 from pathlib import Path
 import shutil
-from pdfminer.high_level import extract_text
+from pdfminer.high_level import extract_text, extract_text_to_fp
 import pytesseract
 from PIL import Image
 import io
@@ -16,6 +16,9 @@ import imghdr
 import traceback
 import logging
 import magic
+from pdfminer.layout import LAParams
+from io import StringIO
+import PyPDF2
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -128,11 +131,7 @@ async def process_document(
                     # For PDFs, we'll process page by page until we get enough text
                     logger.info(f"Processing PDF until we get {max_chars} characters")
                     
-                    # Import additional tools for page-by-page processing
-                    from pdfminer.high_level import extract_text_to_fp
-                    from pdfminer.layout import LAParams
-                    from io import StringIO
-                    import PyPDF2
+
                     
                     # First, get the total number of pages
                     with open(input_file, 'rb') as f:
