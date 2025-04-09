@@ -1,22 +1,35 @@
-########## Stage 1 – build Python wheels (optional) ##########
-FROM python:3.11-alpine AS build
-RUN apk add --no-cache build-base && \
-    pip wheel --wheel-dir=/wheels -r requirements.txt
+# Use Python 3.11 as base image
+FROM python:3.11
 
-########## Stage 2 – runtime ##########
-FROM alpine:3.19
-# tools
-RUN apk add --no-cache \
-        python3 py3-pip \
-        ghostscript tesseract-ocr tesseract-ocr-data-eng \
-        unpaper pngquant qpdf file
+# Install system dependencies needed by ocrmypdf and python-magic
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ghostscript \
+    tesseract-ocr \
+    tesseract-ocr-eng \
+    unpaper \
+    pngquant \
+    qpdf \
+    libmagic1 \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
-# wheels from stage 1
-COPY --from=build /wheels /wheels
-RUN pip install --no-cache-dir /wheels/*
-
-# app
+# Set working directory
 WORKDIR /app
+
+# Copy requirements first to leverage Docker cache
+COPY requirements.txt .
+
+# Upgrade pip and install build tools
+RUN pip install --upgrade pip setuptools wheel
+
+# Install Python dependencies
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy the rest of the application
 COPY . .
+
+# Expose port
 EXPOSE 8000
+
+# Command to run the application
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
