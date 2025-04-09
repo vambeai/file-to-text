@@ -125,8 +125,8 @@ async def process_document(request: Request, url: str = None, api_key: str = Dep
                     ocrmypdf.ocr(
                         input_file,
                         output_file,
-                        force_ocr=True,
-                        skip_text=False,
+                        # force_ocr=True, # Changed: Let ocrmypdf decide based on skip_text
+                        skip_text=True,   # Changed: Skip OCR if text layer already exists
                         output_type='pdf',
                         progress_bar=False
                     )
