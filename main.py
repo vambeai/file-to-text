@@ -151,13 +151,14 @@ async def process_document(
                         page_output = temp_path / f"output_page_{page_num+1}.pdf"
                         
                         try:
+                            # Use string format for page ranges as per ocrmypdf documentation
                             ocrmypdf.ocr(
                                 input_file,
                                 page_output,
                                 force_ocr=True,
                                 output_type='pdf',
                                 progress_bar=False,
-                                pages=[page_num+1]  # 1-based page numbering
+                                pages=f"{page_num+1}"  # 1-based page numbering as string
                             )
                             
                             # Extract text from just this page
@@ -257,4 +258,3 @@ async def process_document(
 
 @app.get("/health", status_code=200)
 async def health_check():
-    return {"status": "healthy"}
