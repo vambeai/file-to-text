@@ -1,5 +1,6 @@
 # Use Python 3.11 as base image
 FROM python:3.11
+FROM minidocks/ghostscript:latest
 
 # Install system dependencies needed by ocrmypdf and python-magic
 RUN apt-get update && apt-get install -y --no-install-recommends \
