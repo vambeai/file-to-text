@@ -1,12 +1,8 @@
-# Use Python 3.12 as base image
-FROM python:3.12
+# Use Python 3.11 as base image
+FROM python:3.11
 
 # Install system dependencies needed by ocrmypdf and python-magic
-# Temporarily add testing repo to force newer ghostscript (> 10.02.0)
-RUN echo "deb http://deb.debian.org/debian testing main" > /etc/apt/sources.list.d/testing.list && \
-    # Pin ghostscript to testing, keep others stable
-    echo "Package: *\nPin: release a=stable\nPin-Priority: 900\n\nPackage: ghostscript\nPin: release a=testing\nPin-Priority: 990" > /etc/apt/preferences.d/pinning && \
-    apt-get update && apt-get install -y --no-install-recommends \
+RUN apt-get update && apt-get install -y --no-install-recommends \
     ghostscript \
     tesseract-ocr \
     tesseract-ocr-eng \
@@ -14,8 +10,6 @@ RUN echo "deb http://deb.debian.org/debian testing main" > /etc/apt/sources.list
     pngquant \
     qpdf \
     libmagic1 \
-    # Clean up testing repo config
-    && rm /etc/apt/sources.list.d/testing.list && rm /etc/apt/preferences.d/pinning \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
