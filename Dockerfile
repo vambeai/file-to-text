@@ -4,7 +4,6 @@ FROM minidocks/ghostscript:latest
 
 # Install system dependencies needed by ocrmypdf and python-magic
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    ghostscript \
     tesseract-ocr \
     tesseract-ocr-eng \
     unpaper \
