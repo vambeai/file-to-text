@@ -1,26 +1,14 @@
-# Use Python 3.11 slim as base image
-FROM python:3.11-slim
+# Use Python 3.11 as base image
+FROM python:3.11
 
-# Install system dependencies for OCRMypdf
+# Install system dependencies needed by ocrmypdf and python-magic
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    # Build tools
-    build-essential \
-    # Pillow dependencies
-    libjpeg-dev \
-    zlib1g-dev \
-    libtiff5-dev \
-    libopenjp2-7-dev \
-    libwebp-dev \
-    # pikepdf dependency
-    libqpdf-dev \
-    # ocrmypdf dependencies
     ghostscript \
     tesseract-ocr \
     tesseract-ocr-eng \
     unpaper \
     pngquant \
     qpdf \
-    # python-magic dependency
     libmagic1 \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
