@@ -19,8 +19,8 @@ WORKDIR /app
 # Copy requirements first to leverage Docker cache
 COPY requirements.txt .
 
-# Install wheel first for building dependencies
-RUN pip install wheel
+# Upgrade pip and install build tools
+RUN pip install --upgrade pip setuptools wheel
 
 # Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
